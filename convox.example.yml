@@ -1,0 +1,52 @@
+services:
+  web:
+    image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
+    # domain:
+    #   - formapi.yourdomain.com
+    health:
+      path: /health
+      grace: 30
+    command: foreman start -c web=1
+    labels:
+      - convox.deployment.minimum=50
+    scale:
+      memory: 512
+      cpu: 256
+      count: 2-10
+      targets:
+        cpu: 70
+        memory: 90
+        requests: 300
+    environment:
+      - "*"
+      - ENTERPRISE=true
+      - PORT=4001
+      - MALLOC_ARENA_MAX=2
+      - RAILS_SERVE_STATIC_FILES=enabled
+      - RAILS_LOG_TO_STDOUT=enabled
+      - LANG=en_US.UTF-8
+      - REQUEST_TIMEOUT=30
+    port: 4001
+  worker:
+    image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
+    command: foreman start -c worker=2
+    labels:
+      - convox.deployment.minimum=50
+    scale:
+      memory: 512
+      cpu: 256
+      count: 2-10
+      targets:
+        cpu: 80
+        memory: 90
+    environment:
+      - "*"
+      - ENTERPRISE=true
+      - MALLOC_ARENA_MAX=2
+      - RAILS_LOG_TO_STDOUT=enabled
+      - LANG=en_US.UTF-8
+timers:
+  submissionExpiration:
+    schedule: 0 9 * * ?
+    command: bundle exec rake submissions:enqueue_expiry_jobs
+    service: worker
