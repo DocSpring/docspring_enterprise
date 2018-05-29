@@ -8,4 +8,4 @@ echo "=> Running ./scripts/pre-release in: $RELEASE_ID"
 convox run --release "$RELEASE_ID" worker ./scripts/pre-release
 
 echo "=> Promoting Release: $RELEASE_ID"
-convox releases promote "$RELEASE_ID"
+convox releases promote "$RELEASE_ID" --wait
