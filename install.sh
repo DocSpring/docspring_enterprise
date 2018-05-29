@@ -1,15 +1,31 @@
 #!/bin/bash
 set -e
+if [ -z "$STACK_NAME" ]; then
+  read -p 'Please enter a name for your convox installation (default: formapi-enterprise): ' STACK_NAME
+  if [ -z "$STACK_NAME" ]; then
+    STACK_NAME=formapi-enterprise
+    echo "=> Using convox stack name: $STACK_NAME"
+  fi
+  export STACK_NAME
+fi
 
 # Create convox.yml from example
 if ! [ -f convox.yml ]; then cp convox.example.yml convox.yml; fi
 
 if [ -z "$AWS_REGION" ]; then
-  read -p 'Please enter your AWS region (leave blank for us-east-1): ' AWS_REGION
+  read -p 'Please enter your AWS region (default: us-east-1): ' AWS_REGION
   if [ -z "$AWS_REGION" ]; then
-    export AWS_REGION=us-east-1
+    AWS_REGION=us-east-1
     echo "=> Using region: $AWS_REGION"
   fi
+  export AWS_REGION
+fi
+
+EXISTING_INSTALLATION=$(cat ~/.convox/auth | grep "$STACK_NAME.*$AWS_REGION" | cut -d'"' -f2)
+if [ -n "$EXISTING_INSTALLATION" ]; then
+  echo "ERROR: ~/.convox/auth already contains credentials for a convox installation named '$STACK_NAME' in the $AWS_REGION region!"
+  echo "Remove the value for '$EXISTING_INSTALLATION', or run 'convox uninstall' to remove the installation."
+  exit 1
 fi
 
 if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
@@ -46,38 +62,50 @@ echo "Email:    $ADMIN_EMAIL"
 echo "Password: $ADMIN_PASSWORD"
 echo
 
-echo "=> Installing Convox..."
+echo "=> Installing Convox ($STACK_NAME)..."
 convox install \
   --instance-type t2.medium \
   --build-instance "" \
-  --stack-name formapi-enterprise
+  --stack-name "$STACK_NAME"
+
+for f in host rack; do
+  if [ -f ~/.convox/$f ]; then
+    echo "=> Removing ~/.convox/$f... (Moving to ~/.convox/$f.bak)"
+    echo "   Restore with: mv ~/.convox/$f.bak ~/.convox/$f"
+    mv ~/.convox/$f ~/.convox/$f.bak
+  fi
+done
 
 echo "=> Setting the default host for the convox CLI..."
-CONVOX_HOST=$(cat ~/.convox/auth | grep formapi-enterprise | cut -d'"' -f2)
+CONVOX_HOST=$(cat ~/.convox/auth | grep "$STACK_NAME.*$AWS_REGION" | cut -d'"' -f2)
 echo $CONVOX_HOST > ~/.convox/host
 
-echo "=> Running 'convox rack' to ensure that everything is working..."
+echo "=> Running 'convox rack' to make sure that everything is working..."
 convox rack
 
+echo "=> Removing build instance... (convox bug that will be fixed soon)"
+convox rack params set BuildInstance="" --wait
+
 echo "=> Creating the FormAPI app..."
+echo "-----> Documentation: https://convox.com/docs/creating-an-application/"
 convox apps create formapi --wait
 
 # Prevents conflicts with S3 bucket names
 S3_BUCKET_SUFFIX=$(openssl rand -hex 5)
 
-echo "=> Setting up Postgres, Redis, and S3 bucket..."
-echo "   (This can take around 5-10 minutes.)"
+echo "=> Setting up Postgres, Redis, and S3 bucket... (This can take around 5-10 minutes)"
+echo "-----> Documentation: https://convox.com/docs/about-resources/"
 (convox resources create postgres \
   --database=formapi_enterprise \
   --instance-type=db.t2.medium \
   --wait \
   && echo "=====> Postgres is ready") &
-sleep 5
+sleep 7
 (convox resources create redis \
   --instance-type=cache.t2.medium \
   --wait \
   && echo "=====> Redis is ready") &
-sleep 5
+sleep 7
 (convox resources create s3 \
   --name="formapi-docs-$S3_BUCKET_SUFFIX" \
   --wait \
@@ -85,7 +113,6 @@ sleep 5
 
 wait
 echo "=> All resources are ready!"
-echo
 
 echo "=> Fetching resource URLs to configure app..."
 
@@ -112,7 +139,6 @@ aws s3api put-bucket-cors \
   --bucket $S3_AWS_UPLOADS_S3_BUCKET \
   --cors-configuration file://s3_bucket_cors.json
 
-
 echo "=> Generating secret keys for authentication sessions and encryption..."
 SECRET_KEY_BASE=$(openssl rand -hex 64)
 SUBMISSION_DATA_ENCRYPTION_KEY=$(openssl rand -hex 32)
@@ -121,8 +147,7 @@ echo "=> Finding default domain for web service..."
 CONVOX_ELB_NAME_AND_REGION=$(convox rack | grep 'Domain' | sed -n 's/Domain\s*\([^\.]*\.[^\.]*\)\..*/\1/p')
 DEFAULT_DOMAIN_NAME="formapi-web.$CONVOX_ELB_NAME_AND_REGION.convox.site"
 echo "======> Default domain: $DEFAULT_DOMAIN_NAME"
-echo "        (You can use this as a CNAME record, but"
-echo "        make sure you set the domain in convox.yml)"
+echo "        (You can use this as a CNAME record, but make sure you set your domain in convox.yml)"
 
 echo "=> Setting environment variables to configure FormAPI..."
 convox env set \
@@ -141,32 +166,39 @@ convox env set \
 
 echo
 echo "=> Adding FormAPI ECR Docker Registry..."
+echo "-----> Documentation: https://convox.com/docs/private-registries/"
 convox registries add 691950705664.dkr.ecr.us-east-1.amazonaws.com \
   --username "$FORMAPI_ECR_ACCESS_KEY_ID" \
   --password "$FORMAPI_ECR_ACCESS_KEY_SECRET" \
 
-echo "=> Creating a build for FormAPI Enterprise..."
-RELEASE_ID=$(convox deploy --id)
+echo "=> Setting web/worker scale to 0 for initial deploy... (Database is not ready yet)"
+sed 's/count: .*/count: 0/' convox.yml > convox.yml.initial
 
-echo "=> Have to wait a long time for convox to get into a steady state..."
-sleep 180
+echo "=> Initial deploy for FormAPI Enterprise..."
+echo "-----> Documentation: https://convox.com/docs/deploying-to-convox/"
+RELEASE_ID=$(convox deploy --id --wait --file convox.yml.initial)
+
 echo "=> Setting up the database..."
-convox run web rake db:create db:migrate
+convox run web rake db:create db:migrate db:seed
 
-sleep 60
-convox run web rake db:seed
+echo "=> Final deploy to start web/worker containers..."
+convox deploy --wait
+
+echo "=> Generating and replacing EC2 keypair for SSH access..."
+echo "-----> Documentation: https://convox.com/docs/ssh-keyroll/"
+convox instances keyroll
+
+rm -f convox.yml.initial
 
 echo
 echo "All done!"
 echo
-echo "In a few moments, you should be able to visit: $DEFAULT_DOMAIN_NAME"
-echo "and sign in with:"
+echo "You can now visit $DEFAULT_DOMAIN_NAME and sign in with:"
 echo
 echo "    Email:    $ADMIN_EMAIL"
 echo "    Password: $ADMIN_PASSWORD"
 echo
-echo "You can configure a custom domain name, auto-scaling options,"
-echo "and other options in convox.yml"
+echo "You can configure a custom domain name, auto-scaling, and other options in convox.yml."
 echo "To deploy your changes, run: convox deploy"
 echo
 echo "To learn more about the convox CLI, run: convox --help"
@@ -174,9 +206,14 @@ echo
 echo "  * View the Convox documentation: https://convox.com/docs/"
 echo "  * View the FormAPI documentation: https://formapi.io/docs/"
 echo
+echo "To completely uninstall FormAPI from your AWS account, you can run:"
 echo
-echo "-----------------------------------------------"
-echo "Thank you for using FormAPI, and please contact"
-echo "support@formapi.io if you need any help!"
-echo "-----------------------------------------------"
+echo "    convox resources delete $S3_RESOURCE --wait"
+echo "    convox uninstall $STACK_NAME $AWS_REGION"
+echo
+echo "    (You must delete the S3 bucket first: https://github.com/convox/rack/issues/2701)"
+echo
+echo "------------------------------------------------------------------------------------"
+echo "Thank you for using FormAPI! Please contact support@formapi.io if you need any help."
+echo "------------------------------------------------------------------------------------"
 echo
