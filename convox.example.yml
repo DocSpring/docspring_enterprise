@@ -1,8 +1,8 @@
 services:
   web:
     image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
-    # domain:
-    #   - formapi.yourdomain.com
+    domain:
+      - formapi.example.com
     health:
       path: /health
       grace: 30
@@ -10,18 +10,17 @@ services:
     labels:
       - convox.deployment.minimum=50
     scale:
-      memory: 512
+      memory: 1024
       cpu: 512
       count: 3-10
       targets:
-        cpu: 70
+        cpu: 80
         memory: 90
         requests: 300
     environment:
       - "*"
       - ENTERPRISE=true
       - PORT=4001
-      - MALLOC_ARENA_MAX=2
       - RAILS_SERVE_STATIC_FILES=enabled
       - RAILS_LOG_TO_STDOUT=enabled
       - LANG=en_US.UTF-8
@@ -33,8 +32,8 @@ services:
     labels:
       - convox.deployment.minimum=50
     scale:
-      memory: 512
-      cpu: 256
+      memory: 1024
+      cpu: 512
       count: 3-10
       targets:
         cpu: 80
@@ -42,7 +41,6 @@ services:
     environment:
       - "*"
       - ENTERPRISE=true
-      - MALLOC_ARENA_MAX=2
       - RAILS_LOG_TO_STDOUT=enabled
       - LANG=en_US.UTF-8
 timers:
