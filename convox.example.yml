@@ -11,8 +11,8 @@ services:
       - convox.deployment.minimum=50
     scale:
       memory: 512
-      cpu: 256
-      count: 2-10
+      cpu: 512
+      count: 3-10
       targets:
         cpu: 70
         memory: 90
@@ -35,7 +35,7 @@ services:
     scale:
       memory: 512
       cpu: 256
-      count: 2-10
+      count: 3-10
       targets:
         cpu: 80
         memory: 90
