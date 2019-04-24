@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+mkdir -p ~/.convox
+
 if [ -z "$STACK_NAME" ]; then
   read -p 'Please enter a name for your convox installation (default: formapi-enterprise): ' STACK_NAME
   if [ -z "$STACK_NAME" ]; then
@@ -21,11 +23,13 @@ if [ -z "$AWS_REGION" ]; then
   export AWS_REGION
 fi
 
-EXISTING_INSTALLATION=$(cat ~/.convox/auth | grep "$STACK_NAME.*$AWS_REGION" | cut -d'"' -f2)
-if [ -n "$EXISTING_INSTALLATION" ]; then
-  echo "ERROR: ~/.convox/auth already contains credentials for a convox installation named '$STACK_NAME' in the $AWS_REGION region!"
-  echo "Remove the value for '$EXISTING_INSTALLATION', or run 'convox uninstall' to remove the installation."
-  exit 1
+if [ -f ~/.convox/auth ]; then
+  EXISTING_INSTALLATION=$(cat ~/.convox/auth | grep "$STACK_NAME.*$AWS_REGION" | cut -d'"' -f2)
+  if [ -n "$EXISTING_INSTALLATION" ]; then
+    echo "ERROR: ~/.convox/auth already contains credentials for a convox installation named '$STACK_NAME' in the $AWS_REGION region!"
+    echo "Remove the value for '$EXISTING_INSTALLATION', or run 'convox uninstall' to remove the installation."
+    exit 1
+  fi
 fi
 
 if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
