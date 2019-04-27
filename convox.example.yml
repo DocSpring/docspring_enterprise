@@ -1,14 +1,21 @@
 services:
   web:
     image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
+    resources:
+      - database
+      - redis
     domain:
-      - formapi.example.com
+      # - formapi.example.com
     health:
-      path: /health
-      grace: 30
+      path: ${HEALTH_CHECK_PATH}
+      grace: 20
+      interval: 5
     command: foreman start -c web=1
     labels:
       - convox.deployment.minimum=50
+      - convox.draining.timeout=10
+      - convox.health.threshold.healthy=2
+      - convox.health.threshold.unhealthy=4
     scale:
       memory: 1024
       cpu: 512
@@ -19,15 +26,18 @@ services:
         requests: 300
     environment:
       - "*"
-      - ENTERPRISE=true
-      - PORT=4001
-      - RAILS_SERVE_STATIC_FILES=enabled
-      - RAILS_LOG_TO_STDOUT=enabled
-      - LANG=en_US.UTF-8
+      - WEB_CONCURRENCY=3
+      - RAILS_MAX_THREADS=5
       - REQUEST_TIMEOUT=30
+      - FORCE_SSL=true
+      - PORT=4001
     port: 4001
+
   worker:
     image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
+    resources:
+      - database
+      - redis
     command: foreman start -c worker=2
     labels:
       - convox.deployment.minimum=50
@@ -40,9 +50,25 @@ services:
         memory: 90
     environment:
       - "*"
-      - ENTERPRISE=true
-      - RAILS_LOG_TO_STDOUT=enabled
-      - LANG=en_US.UTF-8
+      - FORCE_SSL=true
+
+# -----------------------------------------------------------------
+# WARNING: If you remove (or change the class) for any of these
+# resources, Convox will delete them and you will lose your data.
+# It is a good idea to sign into your AWS account and turn on
+# "Termination Protection" for your RDS and ElastiCache resources.
+# -----------------------------------------------------------------
+resources:
+  database:
+    type: postgres
+    options:
+      class: db.t3.medium
+      storage: 50
+  redis:
+    type: redis
+    options:
+      class: cache.t2.medium    # (cache.t3.medium is not available yet)
+
 timers:
   submissionExpiration:
     schedule: 0 9 * * ?
