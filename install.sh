@@ -198,9 +198,6 @@ convox run web rake db:create db:migrate db:seed
 echo "=> Updating the health check path to include database tests..."
 convox env set --promote --wait HEALTH_CHECK_PATH="$COMPLETE_HEALTH_CHECK_PATH"
 
-echo "=> Generating and replacing EC2 keypair for SSH access..."
-convox instances keyroll --wait
-
 echo
 echo "All done!"
 echo
