@@ -86,17 +86,17 @@ echo "============================================"
 echo "                 SUMMARY"
 echo "============================================"
 echo
-echo "Convox Stack Name:             $STACK_NAME"
-echo "AWS Region:                    $AWS_REGION"
-echo "AWS Access Key ID:             $AWS_ACCESS_KEY_ID"
-echo "AWS Secret Access Key:         $AWS_SECRET_ACCESS_KEY"
-echo "FormAPI ECR Access Key ID:     $FORMAPI_ECR_ACCESS_KEY_ID"
-echo "FormAPI ECR Secret Access Key: $FORMAPI_ECR_ACCESS_KEY_SECRET"
+echo "If anything goes wrong during the installation, run the following commands"
+echo "to set the configuration variables before you retry the script:"
 echo
-echo "When setup is finished, you will be able to sign in with the following credentials:"
-echo
-echo "Email:    $ADMIN_EMAIL"
-echo "Password: $ADMIN_PASSWORD"
+echo "export STACK_NAME=\"$STACK_NAME\"   # Convox Stack Name"
+echo "export AWS_REGION=\"$AWS_REGION\"   # AWS Region"
+echo "export AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\"   # AWS Access Key ID"
+echo "export AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\"   # AWS Secret Access Key"
+echo "export FORMAPI_ECR_ACCESS_KEY_ID=\"$FORMAPI_ECR_ACCESS_KEY_ID\"   # FormAPI ECR Access Key ID"
+echo "export FORMAPI_ECR_ACCESS_KEY_SECRET=\"$FORMAPI_ECR_ACCESS_KEY_SECRET\"   # FormAPI ECR Secret Access Key"
+echo "export ADMIN_EMAIL=\"$ADMIN_EMAIL\"   # Admin Email"
+echo "export ADMIN_PASSWORD=\"$ADMIN_PASSWORD\"   # Admin Password"
 echo
 echo "============================================"
 echo
@@ -121,14 +121,15 @@ convox rack install aws \
   "BuildInstance="
 
 echo "=> Setting the default host for the convox CLI..."
-CONVOX_HOST=$(cat ~/.convox/auth | grep "$STACK_NAME.*$AWS_REGION" | cut -d'"' -f2)
+CONVOX_HOST=$(cat ~/.convox/auth | grep "$STACK_NAME-\d\+\.$AWS_REGION\.elb" | cut -d'"' -f2)
+echo "======> Host: $CONVOX_HOST"
 echo $CONVOX_HOST > ~/.convox/host
 
 echo "=> Running 'convox rack' to make sure that everything is working..."
 convox rack
 
 echo "=> Creating the FormAPI app..."
-echo "-----> Documentation: https://convox.com/docs/creating-an-application/"
+echo "-----> Documentation: https://docs.convox.com/deployment/creating-an-application"
 convox apps create formapi --wait
 
 # Prevents any conflicts with S3 bucket names
@@ -209,7 +210,7 @@ echo "    Email:    $ADMIN_EMAIL"
 echo "    Password: $ADMIN_PASSWORD"
 echo
 echo "You can configure a custom domain name, auto-scaling, and other options in convox.yml."
-echo "To deploy your changes, run: convox deploy"
+echo "To deploy your changes, run: convox deploy --wait"
 echo
 echo "IMPORTANT: You should be very careful with the 'resources' section in convox.yml."
 echo "If you remove, rename, or change these resources, then Convox will delete"
@@ -220,7 +221,7 @@ echo "for your database resources."
 echo
 echo "To learn more about the convox CLI, run: convox --help"
 echo
-echo "  * View the Convox documentation:  https://convox.com/docs/"
+echo "  * View the Convox documentation:  https://docs.convox.com/"
 echo "  * View the FormAPI documentation: https://formapi.io/docs/"
 echo
 echo
@@ -231,13 +232,15 @@ echo " 1) Disable \"Termination Protection\" for any resource where it was enabl
 echo
 echo " 2) Delete all files from the $S3_RESOURCE_NAME S3 bucket:"
 echo
+echo "    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
+echo "    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
 echo "    aws s3 rm s3://$S3_AWS_UPLOADS_S3_BUCKET --recursive"
 echo
 echo " 3) Delete the $S3_RESOURCE_NAME S3 bucket:"
 echo
 echo "    convox rack resources delete $S3_RESOURCE_NAME --wait"
 echo
-echo " 4) Uninstall Convox, which deletes all CloudFormation stacks and resources:"
+echo " 4) Uninstall Convox (deletes all CloudFormation stacks and AWS resources):"
 echo
 echo "    convox rack uninstall aws $STACK_NAME"
 echo
