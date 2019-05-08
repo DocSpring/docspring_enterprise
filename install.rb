@@ -154,7 +154,7 @@ puts "-----> Documentation: https://docs.convox.com/deployment/builds"
 run_convox_command! "deploy --wait"
 
 puts "=> Setting up the database..."
-run_convox_command! "run web rake db:create db:migrate db:seed --release RWRUAOPLZLB"
+run_convox_command! "run web rake db:create db:migrate db:seed"
 
 puts "=> Updating the health check path to include database tests..."
 run_convox_command! "env set --promote --wait HEALTH_CHECK_PATH=#{COMPLETE_HEALTH_CHECK_PATH}"
