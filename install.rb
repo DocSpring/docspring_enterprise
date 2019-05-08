@@ -36,7 +36,16 @@ S3_BUCKET_CORS_POLICY = <<-JSON
 }
 JSON
 
-@prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS + [
+default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
+  .reject { |p| p[:key] == :stack_name }
+
+@prompts = default_prompts + [
+  {
+    key: :stack_name,
+    title: "Convox Stack Name",
+    prompt: "Please enter a name for your Convox installation",
+    default: "formapi-enterprise",
+  },
   {
     section: "ECR Authentication",
     info: "You should have received authentication details for the Docker Registry\n" \
