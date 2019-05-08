@@ -4,8 +4,7 @@ services:
     resources:
       - database
       - redis
-    domain:
-      # - formapi.example.com
+    # domain: formapi.example.com
     health:
       path: ${HEALTH_CHECK_PATH}
       grace: 20
