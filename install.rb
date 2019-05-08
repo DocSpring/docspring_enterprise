@@ -1,15 +1,15 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-$LOAD_PATH << File.expand_path("../../convox_installer/lib", __FILE__)
-require "pry-byebug"
+# $LOAD_PATH << File.expand_path("../../convox_installer/lib", __FILE__)
+# require "pry-byebug"
 
-# require 'bundler/inline'
+require 'bundler/inline'
 
-# gemfile do
-#   source 'https://rubygems.org'
-#   gem 'convox_installer'
-# end
+gemfile do
+  source 'https://rubygems.org'
+  gem 'convox_installer'
+end
 
 require "convox_installer"
 include ConvoxInstaller
