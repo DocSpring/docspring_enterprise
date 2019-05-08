@@ -1,4 +1,5 @@
 convox.example.yml
-install.sh
+install.rb
+switch_rack.sh
+update.sh
 README.md
-s3_bucket_cors.json
