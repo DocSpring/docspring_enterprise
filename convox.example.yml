@@ -9,7 +9,7 @@ services:
       path: ${HEALTH_CHECK_PATH}
       grace: 20
       interval: 5
-    command: foreman start -c web=1
+    command: run_as_deploy foreman start -c web=1
     labels:
       - convox.deployment.minimum=50
       - convox.draining.timeout=10
@@ -37,7 +37,7 @@ services:
     resources:
       - database
       - redis
-    command: foreman start -c worker=2
+    command: run_as_deploy foreman start -c worker=1
     labels:
       - convox.deployment.minimum=50
     scale:
@@ -66,10 +66,10 @@ resources:
   redis:
     type: redis
     options:
-      class: cache.t2.medium    # (cache.t3.medium is not available yet)
+      class: cache.t2.medium # (cache.t3.medium is not available yet)
 
 timers:
   submissionExpiration:
     schedule: 0 9 * * ?
-    command: bundle exec rake submissions:enqueue_expiry_jobs
+    command: run_as_deploy rake submissions:enqueue_expiry_jobs
     service: worker
