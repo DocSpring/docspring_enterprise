@@ -3,7 +3,7 @@
 To clone this repo:
 
 ```
-git clone https://oauth2:35o3BnEyKZztEvC3xSj2@gitlab.com/form_api/formapi_convox.git
+git clone https://oauth2:agYxGMgwn6VixdGuqngM@gitlab.com/docspring/docspring_enterprise_gilts.git
 ```
 
 ### Install Convox and set up FormAPI
