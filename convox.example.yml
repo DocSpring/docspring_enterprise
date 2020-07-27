@@ -1,15 +1,15 @@
 services:
   web:
-    image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
+    image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/docspring/enterprise
     resources:
       - database
       - redis
-    # domain: formapi.example.com
+    # domain: docspring.example.com
     health:
       path: ${HEALTH_CHECK_PATH}
       grace: 20
       interval: 5
-    command: run_as_deploy foreman start -c web=1
+    command: run_as_deploy foreman start -m web=1
     labels:
       - convox.deployment.minimum=50
       - convox.draining.timeout=10
@@ -33,11 +33,11 @@ services:
     port: 4001
 
   worker:
-    image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/formapi/enterprise:latest
+    image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/docspring/enterprise
     resources:
       - database
       - redis
-    command: run_as_deploy foreman start -c worker=1
+    command: run_as_deploy foreman start -m worker=1
     labels:
       - convox.deployment.minimum=50
     scale:
@@ -71,5 +71,5 @@ resources:
 timers:
   submissionExpiration:
     schedule: 0 9 * * ?
-    command: run_as_deploy rake submissions:enqueue_expiry_jobs
+    command: bundle exec rake submissions:enqueue_expiry_jobs
     service: worker
