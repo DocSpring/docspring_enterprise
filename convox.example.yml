@@ -62,11 +62,13 @@ resources:
     type: postgres
     options:
       class: db.t3.medium
+      version: 9.6
       storage: 50
   redis:
     type: redis
     options:
       class: cache.t2.medium # (cache.t3.medium is not available yet)
+      version: 6.0.5
 
 timers:
   submissionExpiration:

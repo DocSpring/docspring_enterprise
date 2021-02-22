@@ -65,6 +65,10 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
     title: "Docker Registry Password",
   },
   {
+    key: :docspring_license,
+    title: "DocSpring License",
+  },
+  {
     key: :convox_app_name,
     title: "Convox App Name",
     value: "docspring",
@@ -143,6 +147,7 @@ else
     "ADMIN_NAME" => "Admin",
     "ADMIN_EMAIL" => config.fetch(:admin_email),
     "ADMIN_PASSWORD" => config.fetch(:admin_password),
+    "DOCSPRING_LICENSE" => config.fetch(:docspring_license),
   }
 
   env_command_params = env.map { |k, v| "#{k}=\"#{v}\"" }.join(" ")
