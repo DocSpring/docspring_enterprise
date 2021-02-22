@@ -148,6 +148,7 @@ else
     "ADMIN_EMAIL" => config.fetch(:admin_email),
     "ADMIN_PASSWORD" => config.fetch(:admin_password),
     "DOCSPRING_LICENSE" => config.fetch(:docspring_license),
+    "DISABLE_EMAILS" => "true",
   }
 
   env_command_params = env.map { |k, v| "#{k}=\"#{v}\"" }.join(" ")
