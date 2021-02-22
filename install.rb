@@ -8,7 +8,8 @@ require 'bundler/inline'
 
 gemfile do
   source 'https://rubygems.org'
-  gem 'convox_installer'
+  gem 'convox_installer', '1.0.3'
+  # gem 'pry-byebug'
 end
 
 require "convox_installer"
@@ -16,7 +17,6 @@ include ConvoxInstaller
 
 require 'fileutils'
 FileUtils.cp('convox.example.yml', 'convox.yml') unless File.exist?('convox.yml')
-
 
 @log_level = Logger::DEBUG
 
@@ -101,6 +101,16 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
     value: S3_BUCKET_CORS_POLICY,
     hidden: true,
   },
+  {
+    key: :secret_key_base,
+    value: -> () { SecureRandom.hex(64) },
+    hidden: true,
+  },
+  {
+    key: :data_encryption_key,
+    value: -> () { SecureRandom.hex(32) },
+    hidden: true,
+  }
 ]
 
 ensure_requirements!
@@ -117,56 +127,79 @@ set_default_app_for_directory!
 add_docker_registry!
 create_s3_bucket!
 
-puts "======> Default domain: #{default_service_domain_name}"
-puts "        You can use this as a CNAME record after configuring a domain in convox.yml"
-puts "        (Note: SSL will be configured automatically.)"
+logger.info "======> Default domain: #{default_service_domain_name}"
+logger.info "        You can use this as a CNAME record after configuring a domain in convox.yml"
+logger.info "        (Note: SSL will be configured automatically.)"
 
-puts "Checking convox env..."
-env = `convox env`
+logger.info "Checking convox env..."
+convox_env_output = `convox env`
 raise "Error running convox env" unless $?.success?
 
-if env.include? 'SECRET_KEY_BASE='
-  puts "=> Initial Convox env has already been configured."
-  puts "   You can update this by running: convox env set ..."
+convox_env = begin
+  convox_env_output.split("\n").map { |s| s.split("=", 2) }.to_h
+rescue StandardError
+  {}
+end
+
+desired_env = {
+  "DOMAIN_NAME" => default_service_domain_name,
+  "AWS_ACCESS_KEY_ID" => s3_bucket_details.fetch(:access_key_id),
+  "AWS_ACCESS_KEY_SECRET" => s3_bucket_details.fetch(:secret_access_key),
+  "AWS_UPLOADS_S3_BUCKET" => s3_bucket_details.fetch(:name),
+  "AWS_UPLOADS_S3_REGION" => config.fetch(:aws_region),
+  "SECRET_KEY_BASE" => config.fetch(:secret_key_base),
+  "SUBMISSION_DATA_ENCRYPTION_KEY" => config.fetch(:data_encryption_key),
+  "ADMIN_NAME" => "Admin",
+  "ADMIN_EMAIL" => config.fetch(:admin_email),
+  "ADMIN_PASSWORD" => config.fetch(:admin_password),
+  "DOCSPRING_LICENSE" => config.fetch(:docspring_license),
+  "DISABLE_EMAILS" => "true",
+  "BLOG_ROOT_URL" => "https://dreamy-mirzakhani-11a53f.netlify.com"
+}
+# Only set health check path if it's not already present.
+if convox_env['HEALTH_CHECK_PATH'].nil?
+  desired_env['HEALTH_CHECK_PATH'] = MINIMAL_HEALTH_CHECK_PATH
+end
+
+updated_keys = []
+env_configured = desired_env.keys.each do |key|
+  if convox_env[key] != desired_env[key]
+    updated_keys << key
+  end
+end
+
+if updated_keys.none?
+  logger.info "=> Convox env has already been configured."
+  logger.info "   You can update this by running: convox env set ..."
 else
-  puts "=> Generating secret keys for authentication sessions and encryption..."
-  secret_key_base = SecureRandom.hex(64)
-  data_encryption_key = SecureRandom.hex(32)
-
-  puts "=> Setting environment variables to configure DocSpring..."
-
-  env = {
-    "HEALTH_CHECK_PATH" => MINIMAL_HEALTH_CHECK_PATH,
-    "DOMAIN_NAME" => default_service_domain_name,
-    "AWS_ACCESS_KEY_ID" => s3_bucket_details.fetch(:access_key_id),
-    "AWS_ACCESS_KEY_SECRET" => s3_bucket_details.fetch(:secret_access_key),
-    "AWS_UPLOADS_S3_BUCKET" => s3_bucket_details.fetch(:name),
-    "AWS_UPLOADS_S3_REGION" => config.fetch(:aws_region),
-    "SECRET_KEY_BASE" => secret_key_base,
-    "SUBMISSION_DATA_ENCRYPTION_KEY" => data_encryption_key,
-    "ADMIN_NAME" => "Admin",
-    "ADMIN_EMAIL" => config.fetch(:admin_email),
-    "ADMIN_PASSWORD" => config.fetch(:admin_password),
-    "DOCSPRING_LICENSE" => config.fetch(:docspring_license),
-    "DISABLE_EMAILS" => "true",
-  }
-
-  env_command_params = env.map { |k, v| "#{k}=\"#{v}\"" }.join(" ")
+  logger.info "=> Setting environment variables to configure DocSpring: #{updated_keys.join(', ')}"
+  env_command_params = desired_env.map { |k, v| "#{k}=\"#{v}\"" }.join(" ")
   run_convox_command! "env set #{env_command_params}"
 end
 
-puts "=> Initial deploy for DocSpring Enterprise..."
-puts "-----> Documentation: https://docs.convox.com/deployment/builds"
-run_convox_command! "deploy --wait"
+# If we are already using the complete health check path, then we can skip the rest.
+if convox_env['HEALTH_CHECK_PATH'] == COMPLETE_HEALTH_CHECK_PATH
+  logger.info "DocSpring is already set up and running."
+else
+  logger.info "Checking convox processes..."
+  convox_processes = `convox ps`
+  if convox_processes.include?('web') && convox_processes.include?('worker')
+    logger.info "=> Initial deploy for DocSpring Enterprise is already done."
+  else
+    logger.info "=> Initial deploy for DocSpring Enterprise..."
+    logger.info "-----> Documentation: https://docs.convox.com/deployment/builds"
+    run_convox_command! "deploy --wait"
+  end
 
-puts "=> Setting up the database..."
-run_convox_command! "run web rake db:create db:migrate db:seed"
+  logger.info "=> Setting up the database..."
+  run_convox_command! "run web rake db:create db:migrate db:seed"
 
-puts "=> Updating the health check path to include database tests..."
-run_convox_command! "env set --promote --wait HEALTH_CHECK_PATH=#{COMPLETE_HEALTH_CHECK_PATH}"
+  logger.info "=> Updating the health check path to include database tests..."
+  run_convox_command! "env set --promote --wait HEALTH_CHECK_PATH=#{COMPLETE_HEALTH_CHECK_PATH}"
+end
 
 puts
-puts "All done!"
+logger.info "All done!"
 puts
 puts "You can now visit #{default_service_domain_name} and sign in with:"
 puts
