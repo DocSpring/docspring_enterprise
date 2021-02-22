@@ -16,8 +16,8 @@ services:
       - convox.health.threshold.healthy=2
       - convox.health.threshold.unhealthy=4
     scale:
-      memory: 1024
-      cpu: 512
+      memory: 1400
+      cpu: 700
       count: 3-10
       targets:
         cpu: 80
@@ -41,8 +41,8 @@ services:
     labels:
       - convox.deployment.minimum=50
     scale:
-      memory: 1024
-      cpu: 512
+      memory: 1400
+      cpu: 700
       count: 3-10
       targets:
         cpu: 80

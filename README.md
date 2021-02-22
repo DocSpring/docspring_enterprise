@@ -1,4 +1,4 @@
-# Convox Configuration for FormAPI Enterprise
+# Convox Configuration for DocSpring Enterprise
 
 To clone this repo:
 
@@ -6,7 +6,7 @@ To clone this repo:
 git clone https://oauth2:agYxGMgwn6VixdGuqngM@gitlab.com/docspring/docspring_enterprise_gilts.git
 ```
 
-### Install Convox and set up FormAPI
+### Install Convox and set up DocSpring
 
 Run the install script:
 

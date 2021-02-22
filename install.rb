@@ -44,7 +44,7 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
     key: :stack_name,
     title: "Convox Stack Name",
     prompt: "Please enter a name for your Convox installation",
-    default: "formapi-enterprise",
+    default: "docspring-enterprise",
   },
   {
     section: "ECR Authentication",
@@ -67,7 +67,7 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
   {
     key: :convox_app_name,
     title: "Convox App Name",
-    value: "formapi",
+    value: "docspring",
   },
   {
     key: :default_service,
@@ -90,7 +90,7 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
   {
     key: :s3_bucket_name,
     title: "S3 Bucket for templates and generated PDFs",
-    value: -> () { "formapi-docs-#{SecureRandom.hex(4)}" },
+    value: -> () { "docspring-docs-#{SecureRandom.hex(4)}" },
   },
   {
     key: :s3_bucket_cors_policy,
@@ -129,7 +129,7 @@ else
   secret_key_base = SecureRandom.hex(64)
   data_encryption_key = SecureRandom.hex(32)
 
-  puts "=> Setting environment variables to configure FormAPI..."
+  puts "=> Setting environment variables to configure DocSpring..."
 
   env = {
     "HEALTH_CHECK_PATH" => MINIMAL_HEALTH_CHECK_PATH,
@@ -149,7 +149,7 @@ else
   run_convox_command! "env set #{env_command_params}"
 end
 
-puts "=> Initial deploy for FormAPI Enterprise..."
+puts "=> Initial deploy for DocSpring Enterprise..."
 puts "-----> Documentation: https://docs.convox.com/deployment/builds"
 run_convox_command! "deploy --wait"
 
@@ -180,10 +180,10 @@ puts
 puts "To learn more about the convox CLI, run: convox --help"
 puts
 puts "  * View the Convox documentation:  https://docs.convox.com/"
-puts "  * View the FormAPI documentation: https://formapi.io/docs/"
+puts "  * View the DocSpring documentation: https://docspring.com/docs/"
 puts
 puts
-puts "To completely uninstall Convox and FormAPI from your AWS account,"
+puts "To completely uninstall Convox and DocSpring from your AWS account,"
 puts "run the following steps (in this order):"
 puts
 puts " 1) Disable \"Termination Protection\" for any resource where it was enabled."
@@ -204,6 +204,6 @@ puts "    convox rack uninstall aws #{config.fetch(:stack_name)}"
 puts
 puts
 puts "------------------------------------------------------------------------------------"
-puts "Thank you for using FormAPI! Please contact support@formapi.io if you need any help."
+puts "Thank you for using DocSpring! Please contact support@docspring.com if you need any help."
 puts "------------------------------------------------------------------------------------"
 puts
