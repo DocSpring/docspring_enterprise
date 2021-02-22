@@ -18,7 +18,7 @@ services:
     scale:
       memory: 1400
       cpu: 700
-      count: 3-10
+      count: 3-5
       targets:
         cpu: 80
         memory: 90
@@ -43,7 +43,7 @@ services:
     scale:
       memory: 1400
       cpu: 700
-      count: 3-10
+      count: 3-5
       targets:
         cpu: 80
         memory: 90
