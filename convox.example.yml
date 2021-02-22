@@ -68,7 +68,7 @@ resources:
     type: redis
     options:
       class: cache.t2.medium # (cache.t3.medium is not available yet)
-      version: 6.0.5
+      version: 6.x
 
 timers:
   submissionExpiration:
