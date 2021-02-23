@@ -142,7 +142,6 @@ rescue StandardError
 end
 
 desired_env = {
-  "DOMAIN_NAME" => default_service_domain_name,
   "AWS_ACCESS_KEY_ID" => s3_bucket_details.fetch(:access_key_id),
   "AWS_ACCESS_KEY_SECRET" => s3_bucket_details.fetch(:secret_access_key),
   "AWS_UPLOADS_S3_BUCKET" => s3_bucket_details.fetch(:name),
@@ -156,9 +155,12 @@ desired_env = {
   "DISABLE_EMAILS" => "true",
   "BLOG_ROOT_URL" => "https://dreamy-mirzakhani-11a53f.netlify.com"
 }
-# Only set health check path if it's not already present.
+# Only set health check path and domain if it's not already present.
 if convox_env['HEALTH_CHECK_PATH'].nil?
   desired_env['HEALTH_CHECK_PATH'] = MINIMAL_HEALTH_CHECK_PATH
+end
+if convox_env['DOMAIN_NAME'].nil?
+  desired_env['DOMAIN_NAME'] = default_service_domain_name
 end
 
 updated_keys = []
