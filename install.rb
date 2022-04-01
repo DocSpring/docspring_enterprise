@@ -8,7 +8,7 @@ require 'bundler/inline'
 
 gemfile do
   source 'https://rubygems.org'
-  gem 'convox_installer', '1.0.8'
+  gem 'convox_installer', '1.0.9'
   # gem 'pry-byebug'
 end
 
