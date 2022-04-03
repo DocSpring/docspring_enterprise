@@ -248,19 +248,15 @@ puts "run the following steps (in this order):"
 puts
 puts " 1) Disable \"Termination Protection\" for any resource where it was enabled."
 puts
-puts " 2) Delete all files from the #{config.fetch(:s3_bucket_name)} S3 bucket:"
+puts " 2) Delete all files from the #{s3_bucket_details.fetch(:name)} S3 bucket:"
 puts
 puts "    export AWS_ACCESS_KEY_ID=#{config.fetch(:aws_access_key_id)}"
 puts "    export AWS_SECRET_ACCESS_KEY=#{config.fetch(:aws_secret_access_key)}"
 puts "    aws s3 rm s3://#{s3_bucket_details.fetch(:name)} --recursive"
 puts
-puts " 3) Delete the #{config.fetch(:s3_bucket_name)} S3 bucket:"
+puts " 3) Uninstall Convox (deletes all AWS resources via Terraform):"
 puts
-puts "    convox rack resources delete #{config.fetch(:s3_bucket_name)} --wait"
-puts
-puts " 4) Uninstall Convox (deletes all CloudFormation stacks and AWS resources):"
-puts
-puts "    convox rack uninstall aws #{config.fetch(:stack_name)}"
+puts "    convox rack uninstall #{config.fetch(:stack_name)}"
 puts
 puts
 puts "------------------------------------------------------------------------------------"
