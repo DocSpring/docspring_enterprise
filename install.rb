@@ -4,14 +4,17 @@
 # $LOAD_PATH << File.expand_path("../../convox_installer/lib", __FILE__)
 # require "pry-byebug"
 
-require 'bundler/inline'
+# require 'bundler/inline'
 
-gemfile do
-  source 'https://rubygems.org'
-  gem 'convox_installer', '1.0.9'
-  # gem 'pry-byebug'
-end
+# gemfile do
+#   source 'https://rubygems.org'
+#   gem 'convox_installer', '3.0.0'
+#   # gem 'pry-byebug'
+# end
 
+require 'pry-byebug'
+
+$LOAD_PATH << File.expand_path('../convox_installer/lib', __dir__)
 require "convox_installer"
 include ConvoxInstaller
 
@@ -23,18 +26,15 @@ FileUtils.cp('convox.example.yml', 'convox.yml') unless File.exist?('convox.yml'
 MINIMAL_HEALTH_CHECK_PATH = "/health/site"
 COMPLETE_HEALTH_CHECK_PATH = "/health"
 
-S3_BUCKET_CORS_POLICY = <<-JSON
-{
-  "CORSRules": [
-    {
-      "AllowedOrigins": ["*"],
-      "AllowedHeaders": ["Authorization", "cache-control", "x-requested-with"],
-      "AllowedMethods": ["PUT", "POST", "GET"],
-      "MaxAgeSeconds": 3000
-    }
-  ]
-}
-JSON
+S3_BUCKET_CORS_RULE = <<-TERRAFORM
+  cors_rule {
+    allowed_headers = ["Authorization", "cache-control", "x-requested-with"]
+    allowed_methods = ["PUT", "POST", "GET"]
+    allowed_origins = ["*"]
+    expose_headers  = []
+    max_age_seconds = 3000
+  }
+TERRAFORM
 
 default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
   .reject { |p| p[:key] == :stack_name }
@@ -97,8 +97,8 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
     value: -> () { "docspring-docs-#{SecureRandom.hex(4)}" },
   },
   {
-    key: :s3_bucket_cors_policy,
-    value: S3_BUCKET_CORS_POLICY,
+    key: :s3_bucket_cors_rule,
+    value: S3_BUCKET_CORS_RULE,
     hidden: true,
   },
   {
@@ -110,6 +110,16 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
     key: :data_encryption_key,
     value: -> () { SecureRandom.hex(32) },
     hidden: true,
+  },
+  {
+    key: :database_username,
+    value: 'docspring',
+    hidden: true
+  },
+  {
+    key: :database_password,
+    value: -> { SecureRandom.hex(16) },
+    hidden: true
   }
 ]
 
@@ -117,22 +127,28 @@ ensure_requirements!
 config = prompt_for_config
 
 backup_convox_host_and_rack
+
 install_convox
 
-validate_convox_auth_and_set_host!
-validate_convox_rack!
+validate_convox_rack_and_write_current!
+validate_convox_rack_api!
 
 create_convox_app!
 set_default_app_for_directory!
 add_docker_registry!
-create_s3_bucket!
+
+add_s3_bucket
+add_rds_database
+add_elasticache_cluster
+
+apply_terraform_update!
 
 logger.info "======> Default domain: #{default_service_domain_name}"
 logger.info "        You can use this as a CNAME record after configuring a domain in convox.yml"
 logger.info "        (Note: SSL will be configured automatically.)"
 
 logger.info "Checking convox env..."
-convox_env_output = `convox env`
+convox_env_output = `convox env --rack #{config.fetch(:stack_name)}`
 raise "Error running convox env" unless $?.success?
 
 convox_env = begin
@@ -141,7 +157,10 @@ rescue StandardError
   {}
 end
 
+# Add database and redis
 desired_env = {
+  "DATABASE_URL" => rds_details[:postgres_url],
+  "REDIS_URL" => elasticache_details[:redis_url],
   "AWS_ACCESS_KEY_ID" => s3_bucket_details.fetch(:access_key_id),
   "AWS_ACCESS_KEY_SECRET" => s3_bucket_details.fetch(:secret_access_key),
   "AWS_UPLOADS_S3_BUCKET" => s3_bucket_details.fetch(:name),
@@ -152,9 +171,9 @@ desired_env = {
   "ADMIN_EMAIL" => config.fetch(:admin_email),
   "ADMIN_PASSWORD" => config.fetch(:admin_password),
   "DOCSPRING_LICENSE" => config.fetch(:docspring_license),
-  "DISABLE_EMAILS" => "true",
-  "BLOG_ROOT_URL" => "https://dreamy-mirzakhani-11a53f.netlify.com"
+  "DISABLE_EMAILS" => "true"
 }
+
 # Only set health check path and domain if it's not already present.
 if convox_env['HEALTH_CHECK_PATH'].nil?
   desired_env['HEALTH_CHECK_PATH'] = MINIMAL_HEALTH_CHECK_PATH
@@ -184,20 +203,20 @@ if convox_env['HEALTH_CHECK_PATH'] == COMPLETE_HEALTH_CHECK_PATH
   logger.info "DocSpring is already set up and running."
 else
   logger.info "Checking convox processes..."
-  convox_processes = `convox ps`
+  convox_processes = `convox ps --rack #{config.fetch(:stack_name)}`
   if convox_processes.include?('web') && convox_processes.include?('worker')
     logger.info "=> Initial deploy for DocSpring Enterprise is already done."
   else
     logger.info "=> Initial deploy for DocSpring Enterprise..."
-    logger.info "-----> Documentation: https://docs.convox.com/deployment/builds"
-    run_convox_command! "deploy --wait"
+    logger.info "-----> Documentation: https://docs.convox.com/deployment/deploying-changes/"
+    run_convox_command! "deploy"
   end
 
   logger.info "=> Setting up the database..."
-  run_convox_command! "run web rake db:create db:migrate db:seed"
+  run_convox_command! "run command rake db:create db:migrate db:seed"
 
   logger.info "=> Updating the health check path to include database tests..."
-  run_convox_command! "env set --promote --wait HEALTH_CHECK_PATH=#{COMPLETE_HEALTH_CHECK_PATH}"
+  run_convox_command! "env set --promote HEALTH_CHECK_PATH=#{COMPLETE_HEALTH_CHECK_PATH}"
 end
 
 puts
