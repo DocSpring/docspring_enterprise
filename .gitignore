@@ -1,3 +1,4 @@
 convox.yml
 .bundle
 .installer_config.json
+.rack_name

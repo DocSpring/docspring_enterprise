@@ -8,13 +8,13 @@ git clone https://oauth2:agYxGMgwn6VixdGuqngM@gitlab.com/docspring/docspring_ent
 
 ### Requirements
 
-* MacOS
-* Convox v3 CLI
-  * https://docs.convox.com/installation/cli
-* AWS CLI
-  * https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
-* Terraform
-  * https://learn.hashicorp.com/tutorials/terraform/install-cli
+- MacOS
+- Convox v3 CLI
+  - https://docs.convox.com/installation/cli
+- AWS CLI
+  - https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
+- Terraform
+  - https://learn.hashicorp.com/tutorials/terraform/install-cli
 
 This installation script requires the Convox and AWS CLI tools.
 
@@ -33,3 +33,7 @@ Run the install script:
 ```
 ./install.rb
 ```
+
+### Deploying Updates
+
+Run `./update.sh` to update to the latest DocSpring Enterprise image. This will perform a 'rolling deployment' with zero downtime, and it will also update your database.
