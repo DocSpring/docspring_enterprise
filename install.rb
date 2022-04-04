@@ -214,11 +214,11 @@ else
   logger.info '=> Ensuring the DocSpring application container can boot successfully...'
   run_convox_command! 'run command ./bin/smoke_test'
 
-  logger.info '=> Checking Postgres, Redis, Rails cache, S3 uploads, Sidekiq job processing...'
-  run_convox_command! 'run command rake tests:health_check'
-
   logger.info '=> Setting up the DocSpring database...'
   run_convox_command! 'run command rake db:create db:migrate db:seed'
+
+  logger.info '=> Checking Postgres, Redis, Rails cache, S3 uploads, Sidekiq job processing...'
+  run_convox_command! 'run command rake tests:health_check'
 
   logger.info '=> Updating the health check path to include database tests...'
   run_convox_command! "env set --promote HEALTH_CHECK_PATH=#{COMPLETE_HEALTH_CHECK_PATH}"
