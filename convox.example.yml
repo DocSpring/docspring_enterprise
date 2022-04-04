@@ -47,7 +47,7 @@ services:
       cpu: 256
       count: 0
     environment:
-      - '*'
+      - "*"
 
 timers:
   update-submissions:
