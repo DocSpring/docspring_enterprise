@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Run `export DEVELOPMENT=1` to require local convox_installer repo
+# Run `export DSE_DEVELOPMENT=1` to require local convox_installer repo
 if ENV['DSE_DEVELOPMENT']
   $LOAD_PATH << File.expand_path('../convox_installer/lib', __dir__)
   require 'pry-byebug'
@@ -10,7 +10,7 @@ else
 
   gemfile do
     source 'https://rubygems.org'
-    gem 'convox_installer', '3.2.0'
+    gem 'convox_installer', '3.2.1'
   end
 end
 
