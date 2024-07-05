@@ -1,10 +1,6 @@
 # Convox Configuration for DocSpring Enterprise
 
-To clone this repo:
-
-```
-git clone https://oauth2:agYxGMgwn6VixdGuqngM@gitlab.com/docspring/docspring_enterprise_gilts.git
-```
+Please see the [Deploying DocSpring Enterprise to AWS via Convox Guide](https://guides.docspring.com/Deploying-DocSpring-Enterprise-to-AWS-via-Convox-6fb67d34d89e49f4ad15ddfc962e6b52) for more information.
 
 ### Requirements
 
@@ -26,11 +22,18 @@ Follow these instructions to install the AWS CLI: https://docs.aws.amazon.com/cl
 
 _Please let us know if you need to run this script on Linux. Linux support should not be too difficult to implement, but unfortunately we probably won't be able to support Windows._
 
-### Install Convox and set up DocSpring
+# Clone this repo
+
+```
+git clone https://github.com/DocSpring/docspring_enterprise.git
+```
+
+### Install Convox and set up DocSpring Enterprise
 
 Run the install script:
 
 ```
+cd docspring_enterprise
 ./install.rb
 ```
 
