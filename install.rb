@@ -10,7 +10,7 @@ else
 
   gemfile do
     source 'https://rubygems.org'
-    gem 'convox_installer', '3.0.0'
+    gem 'convox_installer', '3.1.0'
   end
 end
 
