@@ -10,7 +10,7 @@ else
 
   gemfile do
     source 'https://rubygems.org'
-    gem 'convox_installer', '3.1.0'
+    gem 'convox_installer', '3.2.0'
   end
 end
 
@@ -58,11 +58,11 @@ default_prompts = ConvoxInstaller::Config::DEFAULT_PROMPTS
   },
   {
     key: :docker_registry_username,
-    title: 'Docker Registry Username'
+    title: 'Docker Registry Username (Access Key ID)'
   },
   {
     key: :docker_registry_password,
-    title: 'Docker Registry Password'
+    title: 'Docker Registry Password (Secret access key)'
   },
   {
     key: :docspring_license,
@@ -149,8 +149,6 @@ add_elasticache_cluster
 apply_terraform_update!
 
 logger.info "======> Default domain: #{default_service_domain_name}"
-logger.info '        You can use this as a CNAME record after configuring a domain in convox.yml'
-logger.info '        (Note: SSL will be configured automatically.)'
 
 logger.info 'Checking convox env...'
 convox_env_output = `convox env --rack #{config.fetch(:stack_name)}`
@@ -215,7 +213,7 @@ else
   run_convox_command! 'run command ./bin/smoke_test'
 
   logger.info '=> Setting up the DocSpring database...'
-  run_convox_command! 'run command rake db:create db:migrate db:seed'
+  run_convox_command! 'run command rake db:prepare'
 
   logger.info '=> Checking Postgres, Redis, Rails cache, S3 uploads, Sidekiq job processing...'
   run_convox_command! 'run command rake tests:health_check'
@@ -235,12 +233,9 @@ puts
 puts 'You can configure a custom domain name, auto-scaling, and other options in convox.yml.'
 puts 'To deploy your changes, run: convox deploy --wait'
 puts
-puts "IMPORTANT: You should be very careful with the 'resources' section in convox.yml."
-puts 'If you remove, rename, or change these resources, then Convox will delete'
-puts 'your database. This will result in downtime and a loss of data.'
-puts 'To prevent this from happening, you can sign into your AWS account,'
-puts 'visit the RDS and ElastiCache services, and enable "Termination Protection"'
-puts 'for your database resources.'
+puts "IMPORTANT: We recommend manually enabling \"Termination Protection\""
+puts 'for your RDS (Postgres) and ElastiCache (Redis) resources.'
+puts 'This will help to prevent accidental data loss.'
 puts
 puts 'To learn more about the convox CLI, run: convox --help'
 puts
@@ -251,15 +246,19 @@ puts
 puts 'To completely uninstall Convox and DocSpring from your AWS account,'
 puts 'run the following steps (in this order):'
 puts
-puts ' 1) Disable "Termination Protection" for any resource where it was enabled.'
+puts ' 1) Disable "Termination Protection" for any resources where it was enabled.'
 puts
-puts " 2) Delete all files from the #{s3_bucket_details.fetch(:name)} S3 bucket:"
+puts " 2) Use the AWS CLI to delete all files from your #{s3_bucket_details.fetch(:name)} S3 bucket:"
 puts
 puts "    export AWS_ACCESS_KEY_ID=#{config.fetch(:aws_access_key_id)}"
 puts "    export AWS_SECRET_ACCESS_KEY=#{config.fetch(:aws_secret_access_key)}"
 puts "    aws s3 rm s3://#{s3_bucket_details.fetch(:name)} --recursive"
 puts
-puts ' 3) Uninstall Convox (deletes all AWS resources via Terraform):'
+puts ' 3) Delete the "docspring" Convox app:'
+puts
+puts "    convox apps delete docspring"
+puts
+puts ' 4) Uninstall Convox (deletes all AWS resources via Terraform):'
 puts
 puts "    convox rack uninstall #{config.fetch(:stack_name)}"
 puts

@@ -4,47 +4,53 @@ services:
     # domain: docspring.example.com
     health:
       path: ${HEALTH_CHECK_PATH}
-      grace: 20
+      grace: 50
       interval: 5
     command: run_as_deploy foreman start -m web=1
+    deployment:
+      minimum: 50
+      maximum: 200
+    # To see available CPU/RAM: convox api get /system/capacity
     scale:
       memory: 1400
-      cpu: 700
+      cpu: 600
       count: 3-6
       targets:
-        cpu: 80
-        memory: 90
+        cpu: 90
     environment:
       - "*"
-      - WEB_CONCURRENCY=3
+      - WEB_CONCURRENCY=2
       - RAILS_MAX_THREADS=5
       - REQUEST_TIMEOUT=30
       - FORCE_SSL=true
       - PORT=4001
     port: 4001
+    ingressAnnotations:
+      - nginx.ingress.kubernetes.io/proxy-buffer-size=32k
 
   worker:
     image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/docspring/enterprise
     command: run_as_deploy foreman start -m worker=1
-    labels:
-      - convox.deployment.minimum=50
+    deployment:
+      minimum: 50
+      maximum: 200
     scale:
-      memory: 1400
+      memory: 2000
       cpu: 700
       count: 3-6
       targets:
-        cpu: 80
-        memory: 90
+        cpu: 90
     environment:
       - "*"
       - FORCE_SSL=true
+    privileged: true
 
   command:
     image: 691950705664.dkr.ecr.us-east-1.amazonaws.com/docspring/enterprise
     command: echo "You can use this service to run rake tasks, rails console, etc."
     scale:
       memory: 512
-      cpu: 256
+      cpu: 250
       count: 0
     environment:
       - "*"
